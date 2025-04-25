@@ -1,82 +1,67 @@
 #include <iostream>
+#include <memory>
 #include <vector>
-#include <string>
-#include <algorithm>
 
-// ========================
-// Класс управления запасами
-// Ответственность - управление запасами: добавление, удаление, проверка
-// ========================
-class Warehouse {
-private:
-    std::vector<std::string> inventory;
+class DeliveryCostCalculator {
+public:
+    virtual double calculateCost(double weight, double distance) const = 0;
+    virtual ~DeliveryCostCalculator() = default;
+};
+
+// Стандартная доставка
+class StandardDeliveryCalculator : public DeliveryCostCalculator {
+    const double BASE_RATE = 5.0;
+    const double RATE_PER_KG = 1.5;
+    const double RATE_PER_KM = 0.1;
 
 public:
-    void addItem(const std::string& item) {
-        inventory.push_back(item);
-        std::cout << "Добавлен товар на склад: " << item << std::endl;
-    }
-
-    void removeItem(const std::string& item) {
-        auto it = std::find(inventory.begin(), inventory.end(), item);
-        if (it != inventory.end()) {
-            inventory.erase(it);
-            std::cout << "Удален товар со склада: " << item << std::endl;
-        } else {
-            std::cout << "Товар не найден: " << item << std::endl;
-        }
-    }
-
-    bool hasItem(const std::string& item) {
-        return std::find(inventory.begin(), inventory.end(), item) != inventory.end();
+    double calculateCost(double weight, double distance) const override {
+        return BASE_RATE + (weight * RATE_PER_KG) + (distance * RATE_PER_KM);
     }
 };
 
-// ========================
-// Класс обработки заказов
-// Ответственность - обработка заказов: проверка наличия и удаление товара
-// ========================
-class OrderProcessor {
-private:
-    Warehouse& warehouse;
+// Экспресс-доставка
+class ExpressDeliveryCalculator : public DeliveryCostCalculator {
+    const double BASE_RATE = 10.0;
+    const double RATE_PER_KG = 2.5;
+    const double RATE_PER_KM = 0.3;
+    const double URGENCY_FEE = 15.0;
 
 public:
-    OrderProcessor(Warehouse& wh) : warehouse(wh) {}
-
-    void processOrder(const std::string& item) {
-        std::cout << "Обработка заказа на товар: " << item << std::endl;
-        if (warehouse.hasItem(item)) {
-            warehouse.removeItem(item);
-            std::cout << "Заказ обработан успешно." << std::endl;
-        } else {
-            std::cout << "Не удалось обработать заказ: товар отсутствует." << std::endl;
-        }
+    double calculateCost(double weight, double distance) const override {
+        return BASE_RATE + (weight * RATE_PER_KG) + (distance * RATE_PER_KM) + URGENCY_FEE;
     }
 };
 
-// ========================
-// Класс управления доставкой
-// Ответственность - организация доставки товара по адресу
-// ========================
-class DeliveryManager {
+// Международная доставка
+class InternationalDeliveryCalculator : public DeliveryCostCalculator {
+    const double BASE_RATE = 20.0;
+    const double RATE_PER_KG = 5.0;
+    const double RATE_PER_KM = 0.05;
+    const double CUSTOMS_FEE = 30.0;
+
 public:
-    void deliverItem(const std::string& item, const std::string& address) {
-        std::cout << "Отправка товара \"" << item << "\" по адресу: " << address << std::endl;
+    double calculateCost(double weight, double distance) const override {
+        return BASE_RATE + (weight * RATE_PER_KG) + (distance * RATE_PER_KM) + CUSTOMS_FEE;
     }
 };
 
 int main() {
-    system("chcp 65001>nul");
-    Warehouse warehouse;
-    warehouse.addItem("Ноутбук");
-    warehouse.addItem("Монитор");
-    warehouse.addItem("Клавиатура");
+    std::vector<std::unique_ptr<DeliveryCostCalculator>> calculators;
 
-    OrderProcessor orderProcessor(warehouse);
-    orderProcessor.processOrder("Ноутбук");
+    // Добавляем различные калькуляторы
+    calculators.push_back(std::make_unique<StandardDeliveryCalculator>());
+    calculators.push_back(std::make_unique<ExpressDeliveryCalculator>());
+    calculators.push_back(std::make_unique<InternationalDeliveryCalculator>());
 
-    DeliveryManager deliveryManager;
-    deliveryManager.deliverItem("Ноутбук", "ул. Примерная, д. 42");
+    // Пример расчета стоимости для посылки 5кг на 100км
+    double weight = 5.0;
+    double distance = 100.0;
+
+    for (const auto& calculator : calculators) {
+        double cost = calculator->calculateCost(weight, distance);
+        std::cout << "Delivery cost: " << cost << std::endl;
+    }
 
     return 0;
 }
